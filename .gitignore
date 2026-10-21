@@ -1,0 +1,11 @@
+# Ignore Python virtual environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Ignore downloaded model weights / massive binaries
+models/
+*.bin
+*.pt
+*.pth

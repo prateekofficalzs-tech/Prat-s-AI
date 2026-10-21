@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prat`sAI</title>
+<style>
+:root {
+  --bg:           #0a0a0b;
+  --bg-soft:      #111114;
+  --bg-elev:      #16161a;
+  --bg-hover:     #1a1a20;
+  --border:       #1f1f24;
+  --border-light: #2a2a30;
+  --text:         #ececf1;
+  --text-dim:     #8a8a96;
+  --text-faint:   #5a5a64;
+  --accent:       #6c8cff;
+  --accent-2:     #b06cff;
+  --accent-soft:  rgba(108, 140, 255, 0.12);
+  --user-bg:      #16161a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Text",
+               Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  height: 100vh;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.sidebar {
+  background: var(--bg-soft);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 12px 10px;
+  gap: 6px;
+  user-select: none;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 14px 10px;
+}
+.brand-logo {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 13px; color: white;
+  letter-spacing: -0.02em;
+}
+.brand-name {
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.new-chat {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+}
+.new-chat:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.section-label {
+  color: var(--text-faint);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin: 14px 10px 4px 10px;
+  font-weight: 600;
+}
+
+.threads {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 2px;
+}
+.thread-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.1s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.thread-item:hover { background: var(--bg-elev); color: var(--text); }
+.thread-item.active {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.thread-empty {
+  color: var(--text-faint);
+  font-size: 12px;
+  padding: 4px 10px;
+  font-style: italic;
+}
+
+.sidebar-footer {
+  padding: 10px 12px 4px 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ============================================================
+   MAIN
+   ============================================================ */
+.main {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+.header {
+  height: 48px;
+  min-height: 48px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  background: var(--bg);
+}
+.header-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+.header-chip {
+  margin-left: auto;
+  padding: 4px 10px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 11.5px;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
+}
+
+/* ============================================================
+   CHAT AREA
+   ============================================================ */
+.chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 0 8px 0;
+}
+.chat-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.msg {
+  display: flex;
+  gap: 14px;
+  padding: 10px 0;
+}
+.msg-avatar {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.msg.user .msg-avatar {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-light);
+  color: var(--text-dim);
+}
+.msg.assistant .msg-avatar {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white;
+}
+
+.msg-body {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.65;
+  font-size: 14.5px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  padding-top: 4px;
+}
+.msg.user .msg-body {
+  background: var(--user-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 14px;
+}
+
+/* code styling */
+.msg-body code {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: "SF Mono", Menlo, Consolas, "Cascadia Code", monospace;
+  font-size: 12.5px;
+}
+.msg-body pre {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-family: "SF Mono", Menlo, Consolas, "Cascadia Code", monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.msg-body pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px 60px 24px;
+  text-align: center;
+  min-height: 60vh;
+}
+.empty-logo {
+  width: 56px; height: 56px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  font-weight: 800;
+  font-size: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 24px rgba(108, 140, 255, 0.25);
+}
+.empty-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  letter-spacing: -0.02em;
+}
+.empty-sub {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin-bottom: 32px;
+}
+.suggestions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 620px;
+  width: 100%;
+}
+.suggestion {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+.suggestion:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.suggestion-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+}
+.suggestion-sub {
+  color: var(--text-dim);
+  font-size: 12.5px;
+  margin-top: 3px;
+}
+
+/* ============================================================
+   COMPOSER
+   ============================================================ */
+.composer-wrap {
+  padding: 6px 24px 18px 24px;
+  background: linear-gradient(180deg, transparent, var(--bg) 35%);
+}
+.composer {
+  max-width: 760px;
+  margin: 0 auto;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  padding: 8px 8px 8px 14px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.composer textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14.5px;
+  line-height: 1.5;
+  resize: none;
+  padding: 8px 4px;
+  max-height: 200px;
+  min-height: 24px;
+}
+.composer textarea::placeholder { color: var(--text-faint); }
+
+.send-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  width: 32px; height: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.send-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(108, 140, 255, 0.35);
+}
+.send-btn:disabled {
+  background: var(--bg-elev);
+  color: var(--text-faint);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.composer-hint {
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 11px;
+  margin-top: 8px;
+}
+
+/* ============================================================
+   CURSOR
+   ============================================================ */
+.cursor {
+  display: inline-block;
+  width: 7px; height: 15px;
+  background: var(--accent);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  animation: blink 1s steps(2) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* thinking indicator */
+.thinking-indicator {
+  color: var(--text-dim);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+.thinking-dots {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+.thinking-dots span {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #1f1f24;
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #2a2a30; background-clip: padding-box; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============== SIDEBAR ============== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">P</div>
+      <div class="brand-name">Prat`sAI</div>
+    </div>
+
+    <button class="new-chat" id="newChatBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      New chat
+    </button>
+
+    <div class="section-label">Threads</div>
+    <div class="threads" id="threadsList">
+      <div class="thread-empty">No threads yet</div>
+    </div>
+
+    <div class="sidebar-footer" id="modelInfo">loading…</div>
+  </aside>
+
+  <!-- ============== MAIN ============== -->
+  <main class="main">
+    <header class="header">
+      <span class="header-title" id="threadTitle">New chat</span>
+      <span class="header-chip">
+        <span class="status-dot"></span>
+        local · private
+      </span>
+    </header>
+
+    <div class="chat" id="chatArea">
+      <div class="empty" id="emptyState">
+        <div class="empty-logo">P</div>
+        <div class="empty-title">How can I help you today?</div>
+        <div class="empty-sub">Ask anything. Reasoning, math, writing, code.</div>
+        <div class="suggestions">
+          <div class="suggestion" data-prompt="Explain transformers in simple terms.">
+            <div class="suggestion-title">Explain a concept</div>
+            <div class="suggestion-sub">Transformers in simple terms.</div>
+          </div>
+          <div class="suggestion" data-prompt="Write a Python function that returns the n-th Fibonacci number.">
+            <div class="suggestion-title">Write code</div>
+            <div class="suggestion-sub">A Python Fibonacci function.</div>
+          </div>
+          <div class="suggestion" data-prompt="What is the integral of x^2 from 0 to 3? Show steps.">
+            <div class="suggestion-title">Solve math</div>
+            <div class="suggestion-sub">A definite integral problem.</div>
+          </div>
+          <div class="suggestion" data-prompt="Help me plan a 3-day study schedule for learning Python.">
+            <div class="suggestion-title">Plan something</div>
+            <div class="suggestion-sub">A 3-day study schedule.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="composer-wrap">
+      <div class="composer">
+        <textarea id="composerInput" rows="1"
+                  placeholder="Message Prat`sAI…"></textarea>
+        <button class="send-btn" id="sendBtn" title="Send (Enter)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 19V5M5 12l7-7 7 7"/>
+          </svg>
+        </button>
+      </div>
+      <div class="composer-hint">Enter to send · Shift+Enter for newline</div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+"use strict";
+
+// ============================================================
+// State
+// ============================================================
+const STORAGE_KEY = "pratsai_threads_v1";
+let threads = [];
+let currentThreadId = null;
+let currentMessages = [];
+let isGenerating = false;
+
+try { threads = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch (e) {}
+
+// Elements
+const $threadsList   = document.getElementById("threadsList");
+const $newChatBtn    = document.getElementById("newChatBtn");
+const $chatArea      = document.getElementById("chatArea");
+const $emptyState    = document.getElementById("emptyState");
+const $input         = document.getElementById("composerInput");
+const $sendBtn       = document.getElementById("sendBtn");
+const $threadTitle   = document.getElementById("threadTitle");
+const $modelInfo     = document.getElementById("modelInfo");
+
+// ============================================================
+// Helpers
+// ============================================================
+function persistThreads() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(threads));
+}
+
+function renderThreads() {
+  $threadsList.innerHTML = "";
+  if (threads.length === 0) {
+    const e = document.createElement("div");
+    e.className = "thread-empty";
+    e.textContent = "No threads yet";
+    $threadsList.appendChild(e);
+    return;
+  }
+  threads.forEach(t => {
+    const el = document.createElement("div");
+    el.className = "thread-item" + (t.id === currentThreadId ? " active" : "");
+    el.title = t.title;
+    el.innerHTML = `
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7
+                 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8
+                 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1
+                 8 8v.5z"/>
+      </svg>
+      <span>${escapeHtml(t.title)}</span>
+    `;
+    el.onclick = () => loadThread(t.id);
+    $threadsList.appendChild(el);
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[c]));
+}
+
+function ensureChatInner() {
+  let inner = document.getElementById("chatInner");
+  if (!inner) {
+    $chatArea.innerHTML = '<div class="chat-inner" id="chatInner"></div>';
+    inner = document.getElementById("chatInner");
+  }
+  return inner;
+}
+
+function makeMsg(role, content) {
+  const wrap = document.createElement("div");
+  wrap.className = "msg " + role;
+  const avatar = document.createElement("div");
+  avatar.className = "msg-avatar";
+  avatar.textContent = role === "user" ? "Y" : "P";
+  const body = document.createElement("div");
+  body.className = "msg-body";
+  body.textContent = content;
+  wrap.appendChild(avatar);
+  wrap.appendChild(body);
+  return wrap;
+}
+
+function scrollToBottom() {
+  $chatArea.scrollTop = $chatArea.scrollHeight;
+}
+
+function newChat() {
+  currentThreadId = null;
+  currentMessages = [];
+  $threadTitle.textContent = "New chat";
+  $chatArea.innerHTML = "";
+  $chatArea.appendChild($emptyState);
+  renderThreads();
+}
+
+function loadThread(id) {
+  const t = threads.find(x => x.id === id);
+  if (!t) return;
+  currentThreadId = id;
+  currentMessages = t.messages.slice();
+  $threadTitle.textContent = t.title;
+  const inner = ensureChatInner();
+  inner.innerHTML = "";
+  currentMessages.forEach(m => inner.appendChild(makeMsg(m.role, m.content)));
+  scrollToBottom();
+  renderThreads();
+}
+
+// ============================================================
+// Composer behavior
+// ============================================================
+$input.addEventListener("input", () => {
+  $input.style.height = "auto";
+  $input.style.height = Math.min(200, $input.scrollHeight) + "px";
+});
+$input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+});
+$sendBtn.addEventListener("click", send);
+$newChatBtn.addEventListener("click", () => newChat());
+
+document.querySelectorAll(".suggestion").forEach(s => {
+  s.addEventListener("click", () => {
+    $input.value = s.dataset.prompt;
+    $input.dispatchEvent(new Event("input"));
+    send();
+  });
+});
+
+// ============================================================
+// Send + stream
+// ============================================================
+async function send() {
+  if (isGenerating) return;
+  const text = $input.value.trim();
+  if (!text) return;
+  $input.value = "";
+  $input.style.height = "auto";
+
+  // Create thread on first message
+  if (!currentThreadId) {
+    currentThreadId = String(Date.now());
+    const title = text.length > 42 ? text.slice(0, 42) + "…" : text;
+    threads.unshift({ id: currentThreadId, title, messages: [] });
+    $threadTitle.textContent = title;
+  }
+
+  currentMessages.push({ role: "user", content: text });
+
+  const inner = ensureChatInner();
+  if ($emptyState.parentElement) $emptyState.remove();
+  inner.appendChild(makeMsg("user", text));
+  scrollToBottom();
+
+  const aiMsg = makeMsg("assistant", "");
+  const aiBody = aiMsg.querySelector(".msg-body");
+
+  // Show "Thinking…" indicator with animated dots
+  const thinkNode = document.createElement("div");
+  thinkNode.className = "thinking-indicator";
+  thinkNode.innerHTML = 'Thinking<span class="thinking-dots"><span></span><span></span><span></span></span>';
+  aiBody.appendChild(thinkNode);
+  inner.appendChild(aiMsg);
+  scrollToBottom();
+
+  isGenerating = true;
+  $sendBtn.disabled = true;
+
+  let full = "";
+  let thinkingRemoved = false;
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: currentMessages }),
+    });
+    if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const events = buf.split("\n\n");
+      buf = events.pop();
+      for (const ev of events) {
+        const line = ev.trim();
+        if (!line.startsWith("data:")) continue;
+        try {
+          const data = JSON.parse(line.slice(5).trim());
+          if (data.token) {
+            full = data.token;   // backend sends full cleaned text each event
+            if (!thinkingRemoved) {
+              thinkingRemoved = true;
+              thinkNode.remove();
+              // Create a single text node + cursor for streaming
+              const txt = document.createTextNode("");
+              const cur = document.createElement("span");
+              cur.className = "cursor";
+              aiBody.appendChild(txt);
+              aiBody.appendChild(cur);
+            }
+            // Update the existing text node in-place (NOT append new ones)
+            const txtNode = aiBody.childNodes[aiBody.childNodes.length - 2];
+            if (txtNode && txtNode.nodeType === 3) {
+              txtNode.textContent = full;
+            }
+            scrollToBottom();
+          }
+        } catch {}
+      }
+    }
+  } catch (e) {
+    thinkNode.remove();
+    aiBody.textContent = "⚠ " + (e.message || "Generation error");
+  } finally {
+    // remove any leftover cursor
+    const c = aiBody.querySelector(".cursor");
+    if (c) c.remove();
+    isGenerating = false;
+    $sendBtn.disabled = false;
+    $input.focus();
+  }
+
+  currentMessages.push({ role: "assistant", content: full });
+  const t = threads.find(x => x.id === currentThreadId);
+  if (t) t.messages = currentMessages.slice();
+  persistThreads();
+  renderThreads();
+}
+
+// ============================================================
+// Boot
+// ============================================================
+renderThreads();
+fetch("/api/info").then(r => r.json()).then(d => {
+  $modelInfo.textContent = `${d.params}M · ${d.device}`;
+}).catch(() => { $modelInfo.textContent = "—"; });
+
+$input.focus();
+</script>
+</body>
+</html>

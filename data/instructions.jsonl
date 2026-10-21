@@ -1,0 +1,10 @@
+{"prompt": "What is 12 + 7?", "response": "12 + 7 = 19."}
+{"prompt": "What is 9 times 6?", "response": "9 times 6 equals 54."}
+{"prompt": "What is the capital of France?", "response": "The capital of France is Paris."}
+{"prompt": "Solve 2x + 3 = 11.", "response": "Subtract 3 from both sides: 2x = 8. Divide by 2: x = 4."}
+{"prompt": "What is 144 divided by 12?", "response": "144 / 12 = 12."}
+{"prompt": "Name three prime numbers.", "response": "Three prime numbers are 2, 3, and 5."}
+{"prompt": "What is the area of a 5 by 8 rectangle?", "response": "Area = length times width = 5 * 8 = 40 square units."}
+{"prompt": "Hello!", "response": "Hello! How can I help you today?"}
+{"prompt": "What is a transformer?", "response": "A transformer is a neural network that uses self-attention to model sequences."}
+{"prompt": "What is the sum of 1 through 10?", "response": "Use n*(n+1)/2 with n=10: 10*11/2 = 55."}

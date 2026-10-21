@@ -1,0 +1,28 @@
+The quick brown fox jumps over the lazy dog. Language models learn patterns from large amounts of text.
+A transformer is a neural network architecture based on self-attention. Attention lets every token look at every other token.
+Mathematics is the language of patterns. Addition: 2 + 2 = 4. Multiplication: 3 * 4 = 12. Division: 10 / 2 = 5.
+If a train leaves the station at 60 miles per hour and travels for 3 hours, it covers 180 miles, because 60 times 3 equals 180.
+The sum of the first n positive integers is n times (n plus 1) divided by 2. For n equals 10, the sum is 55.
+Photosynthesis converts sunlight, water, and carbon dioxide into glucose and oxygen. Plants use chlorophyll to capture light.
+The capital of France is Paris. The capital of Japan is Tokyo. The capital of Brazil is Brasilia.
+Programming is the process of writing instructions for computers. Python is a popular language for machine learning.
+A function in mathematics maps inputs to outputs. The function f(x) = x squared takes a number and squares it.
+To solve a linear equation like 2x + 3 = 11, subtract 3 from both sides to get 2x = 8, then divide by 2 to find x = 4.
+The Pythagorean theorem states that in a right triangle, the square of the hypotenuse equals the sum of the squares of the other two sides.
+Recursion is when a function calls itself. The factorial of n is n times the factorial of n minus 1, with factorial of 0 equal to 1.
+The greatest common divisor of two numbers is the largest number that divides both without remainder. The GCD of 12 and 18 is 6.
+A prime number has exactly two divisors: 1 and itself. The first few primes are 2, 3, 5, 7, 11, 13, 17, 19, 23, 29.
+Albert Einstein developed the theory of relativity. E equals m c squared relates energy and mass.
+Water boils at 100 degrees Celsius at standard atmospheric pressure. It freezes at 0 degrees Celsius.
+The Earth orbits the Sun once every 365.25 days. The Moon orbits the Earth roughly every 27 days.
+Question: What is 7 plus 5? Answer: 12. Question: What is 9 times 8? Answer: 72. Question: What is 144 divided by 12? Answer: 12.
+A neural network learns by minimizing a loss function using gradient descent. Backpropagation computes gradients efficiently.
+Self-attention computes a weighted sum of values, where weights come from the similarity of queries and keys.
+The derivative of x squared with respect to x is 2x. The derivative of sin x is cos x. The derivative of e to the x is e to the x.
+An integer is a whole number, positive or negative, including zero. A rational number can be written as a fraction of two integers.
+Question: A rectangle is 5 meters wide and 8 meters long. What is its area? Answer: The area is 5 times 8 which equals 40 square meters.
+Question: If you buy 3 apples at 2 dollars each, what is the total cost? Answer: 3 times 2 equals 6 dollars.
+Question: What is the next number in the sequence 2, 4, 6, 8? Answer: The pattern adds 2 each time, so the next number is 10.
+Reading widely improves vocabulary, writing skills, and general knowledge. Books, articles, and code all help.
+Hello, how are you today? I am doing well, thank you. What can I help you with? I would like to learn about transformers.
+Sure! A transformer processes sequences by attending to all positions in parallel, which makes it efficient on GPUs.
