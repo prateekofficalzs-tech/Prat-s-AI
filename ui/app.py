@@ -44,16 +44,35 @@ args, _ = parser.parse_known_args()
 print(f"\n◆ Prat`sAI  ·  loading model from {args.model_path}…")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 dtype = torch.float16 if device == "cuda" else torch.float32
+MODELS_DIR = PROJECT_ROOT / "models"
+_model_lock = threading.RLock()
+_active_generations = 0
 
-tokenizer = AutoTokenizer.from_pretrained(args.model_path)
-if tokenizer.pad_token_id is None:
-    tokenizer.pad_token = tokenizer.eos_token
 
-model = AutoModelForCausalLM.from_pretrained(
-    args.model_path, torch_dtype=dtype
-).to(device).eval()
-n_params = sum(p.numel() for p in model.parameters()) / 1e6
+def load_model(model_path: Path):
+    """Load one local Hugging Face model folder for the chat server."""
+    tok = AutoTokenizer.from_pretrained(model_path)
+    if tok.pad_token_id is None:
+        tok.pad_token = tok.eos_token
+    mdl = AutoModelForCausalLM.from_pretrained(
+        model_path, torch_dtype=dtype
+    ).to(device).eval()
+    params = sum(p.numel() for p in mdl.parameters()) / 1e6
+    return tok, mdl, params
+
+
+active_model_path = Path(args.model_path).resolve()
+tokenizer, model, n_params = load_model(active_model_path)
+active_model_name = active_model_path.name
 print(f"  · device: {device}  ·  params: {n_params:.0f}M  ·  ready\n")
+
+
+def available_models() -> list[str]:
+    """Only expose direct folders in ./models; never accept arbitrary paths."""
+    if not MODELS_DIR.is_dir():
+        return [active_model_name]
+    names = sorted(folder.name for folder in MODELS_DIR.iterdir() if folder.is_dir())
+    return names if active_model_name in names else [active_model_name, *names]
 
 
 # ============================================================
@@ -70,7 +89,54 @@ async def index():
 
 @app.get("/api/info")
 async def info():
-    return JSONResponse({"params": f"{n_params:.0f}", "device": device})
+    with _model_lock:
+        return JSONResponse({
+            "params": f"{n_params:.0f}",
+            "device": device,
+            "active_model": active_model_name,
+            "models": available_models(),
+        })
+
+
+@app.post("/api/model")
+async def select_model(req: Request):
+    """Switch models on demand, after the current answer has finished."""
+    global tokenizer, model, n_params, active_model_path, active_model_name
+    body = await req.json()
+    requested = body.get("model")
+    if not isinstance(requested, str) or requested not in available_models():
+        return JSONResponse({"detail": "Unknown model."}, status_code=400)
+
+    with _model_lock:
+        if _active_generations:
+            return JSONResponse(
+                {"detail": "Wait for the current response to finish before switching models."},
+                status_code=409,
+            )
+        if requested == active_model_name:
+            return JSONResponse({"model": active_model_name, "params": f"{n_params:.0f}", "device": device})
+
+    model_path = (MODELS_DIR / requested).resolve()
+    if model_path.parent != MODELS_DIR.resolve() or not model_path.is_dir():
+        return JSONResponse({"detail": "Invalid model folder."}, status_code=400)
+
+    try:
+        # Loading is blocking and can take a while, so do it outside the event loop.
+        new_tokenizer, new_model, new_params = await asyncio.to_thread(load_model, model_path)
+    except Exception as exc:
+        return JSONResponse({"detail": f"Could not load {requested}: {exc}"}, status_code=500)
+
+    with _model_lock:
+        if _active_generations:
+            return JSONResponse(
+                {"detail": "A response started while the model was loading; please try again."},
+                status_code=409,
+            )
+        tokenizer, model, n_params = new_tokenizer, new_model, new_params
+        active_model_path, active_model_name = model_path, requested
+    if device == "cuda":
+        torch.cuda.empty_cache()
+    return JSONResponse({"model": active_model_name, "params": f"{n_params:.0f}", "device": device})
 
 
 # ------------------------------------------------------------
@@ -85,6 +151,7 @@ _THINK_RE = re.compile(r"</?think[^>]*>", re.IGNORECASE)
 
 @app.post("/api/chat")
 async def chat(req: Request):
+    global _active_generations
     body = await req.json()
     messages = body.get("messages", [])
     max_new = int(body.get("max_new_tokens", 1024))
@@ -97,30 +164,35 @@ async def chat(req: Request):
     # The `enable_thinking` flag is passed through chat_template_kwargs.
     system_prompt = (
         "You are Prat`sAI, a helpful, knowledgeable assistant. "
-        "Always be thorough and detailed. "
+        "Always respond in clear, fluent, grammatically correct English. "
         "Explain reasoning step by step. "
-        "For math, show full working. "
+        "For math problems, show full step-by-step working and format formulas using standard LaTeX ($...$ for inline math, $$...$$ for block math equations). "
         "Never output <think> or </think> tags."
     )
     chat_msgs = [{"role": "system", "content": system_prompt}] + messages
 
+    # Reserve the currently selected model before constructing the prompt so a
+    # model switch cannot pair one tokenizer with another model.
+    with _model_lock:
+        chat_tokenizer, chat_model = tokenizer, model
+        _active_generations += 1
+
     try:
-        text = tokenizer.apply_chat_template(
+        text = chat_tokenizer.apply_chat_template(
             chat_msgs, tokenize=False, add_generation_prompt=True,
             enable_thinking=False,  # ← Qwen3-specific
         )
     except TypeError:
-        text = tokenizer.apply_chat_template(
+        text = chat_tokenizer.apply_chat_template(
             chat_msgs, tokenize=False, add_generation_prompt=True,
         )
+    inputs = chat_tokenizer(text, return_tensors="pt").to(chat_model.device)
 
-    inputs = tokenizer(text, return_tensors="pt").to(model.device)
-
-    eos_id = tokenizer.eos_token_id
+    eos_id = chat_tokenizer.eos_token_id
     gen_min = min(min_new, max_new // 2)
 
     streamer = TextIteratorStreamer(
-        tokenizer, skip_prompt=True, skip_special_tokens=True,
+        chat_tokenizer, skip_prompt=True, skip_special_tokens=True,
     )
 
     gen_kwargs = dict(
@@ -135,38 +207,40 @@ async def chat(req: Request):
         pad_token_id=eos_id,
         eos_token_id=eos_id,
         streamer=streamer,
-        no_repeat_ngram_size=4,
     )
     gen_thread = threading.Thread(
-        target=model.generate, kwargs=gen_kwargs, daemon=True,
+        target=chat_model.generate, kwargs=gen_kwargs, daemon=True,
     )
     gen_thread.start()
 
     async def event_stream():
         loop = asyncio.get_event_loop()
         full = ""
+        try:
+            while True:
+                piece = await loop.run_in_executor(
+                    None, lambda: next(streamer, None)
+                )
+                if piece is None:
+                    break
+                full += piece
 
-        while True:
-            piece = await loop.run_in_executor(
-                None, lambda: next(streamer, None)
-            )
-            if piece is None:
-                break
-            full += piece
+                # While accumulating, strip any <think> blocks that leaked
+                # through (Qwen3 sometimes emits them despite enable_thinking=False).
+                stripped = re.sub(
+                    r"<think[\s\S]*?</think>", "", full, flags=re.IGNORECASE
+                )
+                # Also handle unclosed <think> — remove everything after it
+                unclosed = re.search(r"<think[^>]*>", stripped, re.IGNORECASE)
+                if unclosed:
+                    stripped = stripped[:unclosed.start()]
 
-            # While accumulating, strip any <think> blocks that leaked
-            # through (Qwen3 sometimes emits them despite enable_thinking=False).
-            stripped = re.sub(
-                r"<think[\s\S]*?</think>", "", full, flags=re.IGNORECASE
-            )
-            # Also handle unclosed <think> — remove everything after it
-            unclosed = re.search(r"<think[^>]*>", stripped, re.IGNORECASE)
-            if unclosed:
-                stripped = stripped[:unclosed.start()]
+                yield f"data: {json.dumps({'token': stripped})}\n\n"
 
-            yield f"data: {json.dumps({'token': stripped})}\n\n"
-
-        yield f"data: {json.dumps({'done': True})}\n\n"
+            yield f"data: {json.dumps({'done': True})}\n\n"
+        finally:
+            with _model_lock:
+                _active_generations -= 1
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 

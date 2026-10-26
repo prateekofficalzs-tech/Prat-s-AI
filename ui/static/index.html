@@ -4,6 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prat`sAI</title>
+<link rel="icon" type="image/png" href="/static/Gemini_Generated_Image_y4vlgdy4vlgdy4vl.png">
+
+<!-- Local Vendor libraries with CDN fallback -->
+<script src="/static/vendor/marked.min.js"></script>
+<link rel="stylesheet" href="/static/vendor/katex.min.css">
+<script src="/static/vendor/katex.min.js"></script>
+<script>
+  if (typeof marked === 'undefined') {
+    document.write('<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>');
+  }
+  if (typeof katex === 'undefined') {
+    document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">');
+    document.write('<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>');
+  }
+</script>
+
 <style>
 :root {
   --bg:           #0a0a0b;
@@ -42,6 +58,69 @@ html, body {
 }
 
 /* ============================================================
+   STARTUP SCREEN
+   ============================================================ */
+.startup-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: var(--bg);
+  opacity: 1;
+  transition: opacity 450ms ease;
+}
+.startup-screen.is-hiding {
+  opacity: 0;
+  pointer-events: none;
+}
+.startup-logo {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 22px;
+  box-shadow: 0 12px 36px rgba(108, 140, 255, 0.28);
+  animation: startup-logo-in 700ms cubic-bezier(.2, .8, .2, 1) both;
+}
+.startup-name {
+  color: var(--text);
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  animation: startup-content-in 700ms 120ms ease both;
+}
+.startup-status {
+  color: var(--text-dim);
+  font-size: 13px;
+  animation: startup-content-in 700ms 220ms ease both;
+}
+.startup-status::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 10px 0 var(--accent), 20px 0 var(--accent);
+  animation: startup-dots 1.2s ease-in-out infinite;
+}
+@keyframes startup-logo-in {
+  from { opacity: 0; transform: scale(.78) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes startup-content-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes startup-dots {
+  50% { opacity: .35; transform: translateX(2px); }
+}
+
+/* ============================================================
    SIDEBAR
    ============================================================ */
 .sidebar {
@@ -62,11 +141,14 @@ html, body {
 }
 .brand-logo {
   width: 28px; height: 28px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   border-radius: 7px;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 13px; color: white;
-  letter-spacing: -0.02em;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.brand-logo img, .empty-logo img {
+  display: block;
+  width: 100%; height: 100%;
+  object-fit: cover;
 }
 .brand-name {
   font-weight: 600;
@@ -175,6 +257,23 @@ html, body {
   text-overflow: ellipsis;
   max-width: 60%;
 }
+.model-selector {
+  appearance: none;
+  min-width: 92px;
+  max-width: 150px;
+  padding: 5px 26px 5px 9px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--bg-elev)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8a96' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 8px center;
+  font: 500 12px "SF Mono", Menlo, Consolas, monospace;
+  cursor: pointer;
+  outline: none;
+}
+.model-selector:hover, .model-selector:focus { border-color: var(--accent); }
+.model-selector:disabled { cursor: wait; color: var(--text-dim); opacity: .7; }
 .header-chip {
   margin-left: auto;
   padding: 4px 10px;
@@ -241,18 +340,69 @@ html, body {
   min-width: 0;
   line-height: 1.65;
   font-size: 14.5px;
-  white-space: pre-wrap;
   word-wrap: break-word;
-  padding-top: 4px;
+  padding-top: 2px;
 }
 .msg.user .msg-body {
   background: var(--user-bg);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 9px 14px;
+  white-space: pre-wrap;
 }
 
-/* code styling */
+/* Markdown styling */
+.msg-body p {
+  margin-bottom: 0.6em;
+}
+.msg-body p:last-child {
+  margin-bottom: 0;
+}
+.msg-body h1, .msg-body h2, .msg-body h3, .msg-body h4 {
+  color: var(--text);
+  margin: 0.9em 0 0.4em 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.msg-body h1 { font-size: 1.35em; }
+.msg-body h2 { font-size: 1.2em; }
+.msg-body h3 { font-size: 1.1em; }
+.msg-body ul, .msg-body ol {
+  margin: 0.4em 0 0.8em 1.4em;
+}
+.msg-body li {
+  margin-bottom: 0.25em;
+}
+.msg-body hr {
+  border: none;
+  border-top: 1px solid var(--border-light);
+  margin: 1.2em 0;
+}
+.msg-body blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+  color: var(--text-dim);
+  margin: 0.8em 0;
+}
+.msg-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.8em 0;
+}
+.msg-body th, .msg-body td {
+  border: 1px solid var(--border-light);
+  padding: 6px 10px;
+  text-align: left;
+}
+.msg-body th {
+  background: var(--bg-elev);
+}
+.msg-body u {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* Code styling */
 .msg-body code {
   background: var(--bg-elev);
   border: 1px solid var(--border);
@@ -279,6 +429,28 @@ html, body {
   font-size: inherit;
 }
 
+/* KaTeX Math styling */
+.math-block {
+  display: block;
+  text-align: center;
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: rgba(22, 22, 26, 0.6);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+.math-inline {
+  display: inline-block;
+  padding: 0 3px;
+}
+.katex {
+  font-size: 1.05em !important;
+}
+.katex-display {
+  margin: 0 !important;
+}
+
 /* ============================================================
    EMPTY STATE
    ============================================================ */
@@ -294,12 +466,8 @@ html, body {
 }
 .empty-logo {
   width: 56px; height: 56px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  color: white;
-  font-weight: 800;
-  font-size: 24px;
+  overflow: hidden;
   margin-bottom: 20px;
   box-shadow: 0 8px 24px rgba(108, 140, 255, 0.25);
 }
@@ -417,7 +585,7 @@ html, body {
 }
 
 /* ============================================================
-   CURSOR
+   CURSOR & THINKING
    ============================================================ */
 .cursor {
   display: inline-block;
@@ -430,7 +598,6 @@ html, body {
 }
 @keyframes blink { 50% { opacity: 0; } }
 
-/* thinking indicator */
 .thinking-indicator {
   color: var(--text-dim);
   font-size: 14px;
@@ -473,12 +640,18 @@ html, body {
 </head>
 <body>
 
+<div class="startup-screen" id="startupScreen" role="status" aria-label="Loading Prat'sAI">
+  <img class="startup-logo" src="/static/Gemini_Generated_Image_y4vlgdy4vlgdy4vl.png"alt="">
+  <div class="startup-name">Prat`sAI</div>
+  <div class="startup-status">Getting things ready</div>
+</div>
+
 <div class="app">
 
   <!-- ============== SIDEBAR ============== -->
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-logo">P</div>
+      <div class="brand-logo"><img src="/static/Gemini_Generated_Image_y4vlgdy4vlgdy4vl.png" alt="Prat'sAI logo"></div>
       <div class="brand-name">Prat`sAI</div>
     </div>
 
@@ -501,6 +674,9 @@ html, body {
   <!-- ============== MAIN ============== -->
   <main class="main">
     <header class="header">
+      <select class="model-selector" id="modelSelector" aria-label="Select model" disabled>
+        <option>Loading models…</option>
+      </select>
       <span class="header-title" id="threadTitle">New chat</span>
       <span class="header-chip">
         <span class="status-dot"></span>
@@ -510,7 +686,7 @@ html, body {
 
     <div class="chat" id="chatArea">
       <div class="empty" id="emptyState">
-        <div class="empty-logo">P</div>
+        <div class="empty-logo"><img src="/static/Gemini_Generated_Image_y4vlgdy4vlgdy4vl.png" alt="Prat'sAI logo"></div>
         <div class="empty-title">How can I help you today?</div>
         <div class="empty-sub">Ask anything. Reasoning, math, writing, code.</div>
         <div class="suggestions">
@@ -555,7 +731,7 @@ html, body {
 "use strict";
 
 // ============================================================
-// State
+// State & Elements
 // ============================================================
 const STORAGE_KEY = "pratsai_threads_v1";
 let threads = [];
@@ -565,7 +741,6 @@ let isGenerating = false;
 
 try { threads = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch (e) {}
 
-// Elements
 const $threadsList   = document.getElementById("threadsList");
 const $newChatBtn    = document.getElementById("newChatBtn");
 const $chatArea      = document.getElementById("chatArea");
@@ -574,6 +749,92 @@ const $input         = document.getElementById("composerInput");
 const $sendBtn       = document.getElementById("sendBtn");
 const $threadTitle   = document.getElementById("threadTitle");
 const $modelInfo     = document.getElementById("modelInfo");
+const $modelSelector = document.getElementById("modelSelector");
+
+// ============================================================
+// Safe Markdown & KaTeX Math Renderer
+// ============================================================
+function escapeHtml(s) {
+  return String(s || "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[c]));
+}
+
+function renderMath(source, displayMode) {
+  if (typeof katex !== "undefined") {
+    try {
+      return katex.renderToString(source.trim(), {
+        displayMode,
+        throwOnError: false,
+        trust: false,
+      });
+    } catch (e) { /* show the original formula below */ }
+  }
+  return escapeHtml(source);
+}
+
+function renderContent(text) {
+  if (!text) return "";
+
+  // Hold formulas aside before Markdown runs. This prevents Markdown from
+  // putting a display equation inside a <p> tag or interpreting its symbols.
+  const blocks = [];
+  const inline = [];
+  const underlines = [];
+  let source = String(text).replace(/\r\n?/g, "\n");
+  source = source.replace(/(?:^|\n)[ \t]*(?:\$\$|\\\[)\s*\n?([\s\S]*?)\n?\s*(?:\$\$|\\\])(?=\n|$)/g,
+    (match, formula) => {
+      const token = `PRATAIMATHBLOCK${blocks.length}TOKEN`;
+      blocks.push(`<div class="math-block">${renderMath(formula, true)}</div>`);
+      return `\n${token}\n`;
+    });
+  source = source.replace(/\\\(([^\n]+?)\\\)|\$([^$\n]+?)\$/g, (match, slashMath, dollarMath) => {
+    const formula = slashMath || dollarMath;
+    // A lone dollar amount (for example "$5") is not a formula.
+    if (dollarMath && /^\d+(?:\.\d+)?$/.test(formula.trim())) return match;
+    const token = `PRATAIMATHINLINE${inline.length}TOKEN`;
+    inline.push(`<span class="math-inline">${renderMath(formula, false)}</span>`);
+    return token;
+  });
+  // Underline is not part of CommonMark. Support both a safe <u>…</u>
+  // response and the convenient ++underlined text++ notation.
+  source = source.replace(/<u>([^<\n]*)<\/u>|\+\+([^+\n]+)\+\+/gi, (match, htmlText, plusText) => {
+    const token = `PRATAIUNDERLINE${underlines.length}TOKEN`;
+    underlines.push(`<u>${escapeHtml(htmlText || plusText)}</u>`);
+    return token;
+  });
+
+  // Do not allow model output to inject arbitrary HTML into the chat page.
+  source = source.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  let html;
+  try {
+    html = typeof marked !== "undefined"
+      ? marked.parse(source, { breaks: true, gfm: true })
+      : escapeHtml(source).replace(/\n/g, "<br>");
+  } catch (e) {
+    html = escapeHtml(source).replace(/\n/g, "<br>");
+  }
+
+  // Replace whole Markdown paragraphs for display equations, then inline math.
+  blocks.forEach((formula, index) => {
+    const token = `PRATAIMATHBLOCK${index}TOKEN`;
+    // `marked` can add whitespace or <br> while a response is streaming.
+    // Handle that well-formed paragraph case, then use a final replacement
+    // so an implementation detail can never be shown to the user.
+    html = html.replace(
+      new RegExp(`<p>\\s*${token}\\s*(?:<br\\s*/?>\\s*)?</p>`, "g"),
+      formula,
+    );
+    html = html.replaceAll(token, formula);
+  });
+  inline.forEach((formula, index) => {
+    html = html.replaceAll(`PRATAIMATHINLINE${index}TOKEN`, formula);
+  });
+  underlines.forEach((content, index) => {
+    html = html.replaceAll(`PRATAIUNDERLINE${index}TOKEN`, content);
+  });
+  return html;
+}
 
 // ============================================================
 // Helpers
@@ -610,12 +871,6 @@ function renderThreads() {
   });
 }
 
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, c => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
-  }[c]));
-}
-
 function ensureChatInner() {
   let inner = document.getElementById("chatInner");
   if (!inner) {
@@ -633,7 +888,11 @@ function makeMsg(role, content) {
   avatar.textContent = role === "user" ? "Y" : "P";
   const body = document.createElement("div");
   body.className = "msg-body";
-  body.textContent = content;
+  if (role === "user") {
+    body.textContent = content;
+  } else {
+    body.innerHTML = renderContent(content);
+  }
   wrap.appendChild(avatar);
   wrap.appendChild(body);
   return wrap;
@@ -681,6 +940,47 @@ $input.addEventListener("keydown", (e) => {
 $sendBtn.addEventListener("click", send);
 $newChatBtn.addEventListener("click", () => newChat());
 
+function setModelInfo(data) {
+  $modelInfo.textContent = `${data.params}M · ${data.device}`;
+}
+
+function populateModelSelector(models, activeModel) {
+  $modelSelector.innerHTML = "";
+  models.forEach(name => {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name;
+    option.selected = name === activeModel;
+    $modelSelector.appendChild(option);
+  });
+  $modelSelector.disabled = false;
+}
+
+$modelSelector.addEventListener("change", async () => {
+  const previous = $modelSelector.dataset.activeModel || $modelSelector.value;
+  const selected = $modelSelector.value;
+  $modelSelector.disabled = true;
+  $modelInfo.textContent = `loading ${selected}…`;
+  try {
+    const response = await fetch("/api/model", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: selected }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "Could not switch model.");
+    $modelSelector.value = data.model;
+    $modelSelector.dataset.activeModel = data.model;
+    setModelInfo(data);
+  } catch (error) {
+    $modelSelector.value = previous;
+    $modelInfo.textContent = error.message || "Model switch failed";
+    alert(error.message || "Model switch failed.");
+  } finally {
+    $modelSelector.disabled = isGenerating;
+  }
+});
+
 document.querySelectorAll(".suggestion").forEach(s => {
   s.addEventListener("click", () => {
     $input.value = s.dataset.prompt;
@@ -699,7 +999,6 @@ async function send() {
   $input.value = "";
   $input.style.height = "auto";
 
-  // Create thread on first message
   if (!currentThreadId) {
     currentThreadId = String(Date.now());
     const title = text.length > 42 ? text.slice(0, 42) + "…" : text;
@@ -717,7 +1016,6 @@ async function send() {
   const aiMsg = makeMsg("assistant", "");
   const aiBody = aiMsg.querySelector(".msg-body");
 
-  // Show "Thinking…" indicator with animated dots
   const thinkNode = document.createElement("div");
   thinkNode.className = "thinking-indicator";
   thinkNode.innerHTML = 'Thinking<span class="thinking-dots"><span></span><span></span><span></span></span>';
@@ -727,6 +1025,7 @@ async function send() {
 
   isGenerating = true;
   $sendBtn.disabled = true;
+  $modelSelector.disabled = true;
 
   let full = "";
   let thinkingRemoved = false;
@@ -753,22 +1052,12 @@ async function send() {
         try {
           const data = JSON.parse(line.slice(5).trim());
           if (data.token) {
-            full = data.token;   // backend sends full cleaned text each event
+            full = data.token;
             if (!thinkingRemoved) {
               thinkingRemoved = true;
               thinkNode.remove();
-              // Create a single text node + cursor for streaming
-              const txt = document.createTextNode("");
-              const cur = document.createElement("span");
-              cur.className = "cursor";
-              aiBody.appendChild(txt);
-              aiBody.appendChild(cur);
             }
-            // Update the existing text node in-place (NOT append new ones)
-            const txtNode = aiBody.childNodes[aiBody.childNodes.length - 2];
-            if (txtNode && txtNode.nodeType === 3) {
-              txtNode.textContent = full;
-            }
+            aiBody.innerHTML = renderContent(full) + '<span class="cursor"></span>';
             scrollToBottom();
           }
         } catch {}
@@ -778,11 +1067,10 @@ async function send() {
     thinkNode.remove();
     aiBody.textContent = "⚠ " + (e.message || "Generation error");
   } finally {
-    // remove any leftover cursor
-    const c = aiBody.querySelector(".cursor");
-    if (c) c.remove();
+    aiBody.innerHTML = renderContent(full);
     isGenerating = false;
     $sendBtn.disabled = false;
+    $modelSelector.disabled = false;
     $input.focus();
   }
 
@@ -798,10 +1086,22 @@ async function send() {
 // ============================================================
 renderThreads();
 fetch("/api/info").then(r => r.json()).then(d => {
-  $modelInfo.textContent = `${d.params}M · ${d.device}`;
-}).catch(() => { $modelInfo.textContent = "—"; });
+  setModelInfo(d);
+  populateModelSelector(d.models, d.active_model);
+  $modelSelector.dataset.activeModel = d.active_model;
+}).catch(() => {
+  $modelInfo.textContent = "—";
+  $modelSelector.innerHTML = "<option>Unavailable</option>";
+});
 
 $input.focus();
+
+// Keep the branded startup view visible for five seconds, then fade it away.
+const $startupScreen = document.getElementById("startupScreen");
+setTimeout(() => {
+  $startupScreen.classList.add("is-hiding");
+  $startupScreen.addEventListener("transitionend", () => $startupScreen.remove(), { once: true });
+}, 5000);
 </script>
 </body>
 </html>
