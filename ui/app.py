@@ -13,7 +13,9 @@ import argparse
 import asyncio
 import json
 import re
+import sys
 import threading
+import time
 import webbrowser
 from pathlib import Path
 
@@ -24,8 +26,14 @@ from fastapi.staticfiles import StaticFiles
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 
 
-HERE = Path(__file__).parent
-PROJECT_ROOT = HERE.parent
+# In the packaged Windows app, bundled UI files are unpacked into _MEIPASS
+# while user models remain beside Prat-sAI.exe in the project folder.
+if getattr(sys, "frozen", False):
+    HERE = Path(sys._MEIPASS) / "ui"
+    PROJECT_ROOT = Path(sys.executable).parent
+else:
+    HERE = Path(__file__).parent
+    PROJECT_ROOT = HERE.parent
 
 # ============================================================
 # CLI
@@ -47,6 +55,8 @@ dtype = torch.float16 if device == "cuda" else torch.float32
 MODELS_DIR = PROJECT_ROOT / "models"
 _model_lock = threading.RLock()
 _active_generations = 0
+_heartbeat_lock = threading.Lock()
+_last_browser_heartbeat = None
 
 
 def load_model(model_path: Path):
@@ -96,6 +106,15 @@ async def info():
             "active_model": active_model_name,
             "models": available_models(),
         })
+
+
+@app.post("/api/heartbeat")
+async def browser_heartbeat():
+    """Record an open chat tab so the packaged server can stop when it closes."""
+    global _last_browser_heartbeat
+    with _heartbeat_lock:
+        _last_browser_heartbeat = time.monotonic()
+    return JSONResponse({"ok": True})
 
 
 @app.post("/api/model")
@@ -254,7 +273,30 @@ def main() -> None:
     print(f"  Open: {url}\n")
     if not args.no_browser:
         threading.Timer(1.2, lambda: webbrowser.open(url)).start()
-    uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
+    # A PyInstaller --noconsole app has no stderr; Uvicorn's default logging
+    # formatter calls stderr.isatty(), which raises when stderr is None.
+    server = uvicorn.Server(uvicorn.Config(
+        app,
+        host=args.host,
+        port=args.port,
+        log_level="warning",
+        log_config=None,
+        access_log=False,
+    ))
+
+    def stop_when_browser_closes() -> None:
+        # Allow refreshes or opening a replacement tab, but stop the local
+        # server after all chat tabs have stopped sending heartbeats.
+        while not server.should_exit:
+            time.sleep(2)
+            with _heartbeat_lock:
+                last_seen = _last_browser_heartbeat
+            if last_seen is not None and time.monotonic() - last_seen > 12:
+                server.should_exit = True
+                break
+
+    threading.Thread(target=stop_when_browser_closes, daemon=True).start()
+    server.run()
 
 
 if __name__ == "__main__":

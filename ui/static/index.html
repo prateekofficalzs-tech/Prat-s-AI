@@ -1087,6 +1087,12 @@ async function send() {
 // Boot
 // ============================================================
 renderThreads();
+// Let the local launcher know a chat tab is still open. The packaged server
+// shuts itself down after all tabs have stopped checking in for a short grace period.
+const sendBrowserHeartbeat = () => fetch("/api/heartbeat", { method: "POST", keepalive: true }).catch(() => {});
+sendBrowserHeartbeat();
+setInterval(sendBrowserHeartbeat, 3000);
+
 fetch("/api/info").then(r => r.json()).then(d => {
   setModelInfo(d);
   populateModelSelector(d.models, d.active_model);

@@ -9,3 +9,8 @@ models/
 *.bin
 *.pt
 *.pth
+
+# Windows build output (Prat-sAI.exe is delivered locally, not through GitHub)
+.build/
+*.spec
+*.exe
